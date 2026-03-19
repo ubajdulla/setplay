@@ -874,8 +874,9 @@ export const useStore = create<AppState>((set, get) => ({
     try {
       const state = get();
       
-      // Always copy from the original default JSON state
-      const stateToCopy = getBoardState(DEFAULT_SCHEMA_JSON as any);
+      // Always copy from the original default JSON state, forced to R1 BASE
+      const baseState = getBoardState(DEFAULT_SCHEMA_JSON as any);
+      const stateToCopy = { ...baseState, activeRotation: 'R1' as Rotation, activePhase: 'SERVE' as Phase, activeNode: 'BASE' as TimelineNode };
 
       const newSchema: SavedSchema = {
         id: `s_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
