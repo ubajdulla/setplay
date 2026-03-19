@@ -211,7 +211,10 @@ const getBoardState = (state: any): BoardState => {
 
 export const useStore = create<AppState>((set, get) => ({
   ...getBoardState(DEFAULT_SCHEMA_JSON as any),
-  checkpoint: getBoardState(DEFAULT_SCHEMA_JSON as any),
+  activeRotation: 'R1' as Rotation,
+  activePhase: 'SERVE' as Phase,
+  activeNode: 'BASE' as TimelineNode,
+  checkpoint: { ...getBoardState(DEFAULT_SCHEMA_JSON as any), activeRotation: 'R1' as Rotation, activePhase: 'SERVE' as Phase, activeNode: 'BASE' as TimelineNode },
   history: [],
   future: [],
   schemas: (() => {
