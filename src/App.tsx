@@ -112,16 +112,9 @@ export default function App() {
       }
     } else if (activeSchemaId) {
       loadSchema(activeSchemaId);
-    } else {
-      const lastSession = localStorage.getItem('vb_last_session');
-      if (lastSession) {
-        try {
-          loadState(JSON.parse(lastSession));
-        } catch (e) {
-          console.error('Failed to load last session');
-        }
-      }
     }
+    // If no URL schema and no saved activeSchemaId, the store already initializes
+    // with the default JSON state — so we don't need to do anything else
 
     // Handle resizing
     const observer = new ResizeObserver(() => {

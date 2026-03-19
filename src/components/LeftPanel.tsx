@@ -220,28 +220,13 @@ export const LeftPanel: React.FC = React.memo(() => {
         </div>
 
         <div className="flex flex-col gap-4">
-          {/* Default Schema Section */}
-          {schemas.find(s => s.id === 'DEFAULT') && (
-            <div className="flex flex-col gap-2">
-              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Default</h3>
-              <SchemaCard 
-                schema={schemas.find(s => s.id === 'DEFAULT')!}
-                isActive={activeSchemaId === 'DEFAULT'}
-                onLoad={loadSchema}
-                onDelete={handleDelete}
-                onExport={handleExport}
-                onRename={renameSchema}
-                userRole={userRole}
-              />
-            </div>
-          )}
-
-          {/* Archive Section */}
+          {/* Archive Section - only user schemas */}
           <div className="flex flex-col gap-2">
             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Archive</h3>
             {schemas.filter(s => s.id !== 'DEFAULT').length === 0 ? (
               <div className="text-center py-8 px-4 bg-white/50 rounded-2xl border border-dashed border-black/5">
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">No saved tactics</p>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">No saved tactics yet</p>
+                <p className="text-[10px] text-gray-300 mt-1">Click "New Schema" to create one</p>
               </div>
             ) : (
               <div className="flex flex-col gap-2">

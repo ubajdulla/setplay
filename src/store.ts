@@ -210,8 +210,8 @@ const getBoardState = (state: any): BoardState => {
 };
 
 export const useStore = create<AppState>((set, get) => ({
-  ...getBaseState(),
-  checkpoint: getBaseState(),
+  ...getBoardState(DEFAULT_SCHEMA_JSON as any),
+  checkpoint: getBoardState(DEFAULT_SCHEMA_JSON as any),
   history: [],
   future: [],
   schemas: (() => {
@@ -225,22 +225,26 @@ export const useStore = create<AppState>((set, get) => ({
     } catch (e) {
       console.error('Failed to parse schemas from localStorage', e);
     }
-    const defaultSchema = getDefaultSchema();
-    // Ensure default schema is always present and at the top
+    // Only return user-created schemas, NOT the default schema
+    // Default schema is used as the initial board state but is NOT shown in the archive
     const filtered = saved.filter((s: any) => s && s.id && s.id !== DEFAULT_SCHEMA_ID);
-    return [defaultSchema, ...filtered];
+    return filtered;
   })(),
   activeSchemaId: (() => {
     try {
-      return localStorage.getItem('vb_active_schema_id') || DEFAULT_SCHEMA_ID;
+      const saved = localStorage.getItem('vb_active_schema_id');
+      // If saved ID is the default schema ID, return null (no active schema = default state)
+      if (!saved || saved === DEFAULT_SCHEMA_ID) return null;
+      return saved;
     } catch (e) {
-      return DEFAULT_SCHEMA_ID;
+      return null;
     }
   })(),
   isReadOnly: (() => {
     try {
-      const activeId = localStorage.getItem('vb_active_schema_id') || DEFAULT_SCHEMA_ID;
-      if (activeId === DEFAULT_SCHEMA_ID) return true;
+      const activeId = localStorage.getItem('vb_active_schema_id');
+      // Default state is NOT read-only - user can browse freely
+      if (!activeId || activeId === DEFAULT_SCHEMA_ID) return false;
       const item = localStorage.getItem('vb_schemas');
       if (!item) return false;
       const saved = JSON.parse(item);
@@ -260,7 +264,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   saveToHistory: () => {
     const state = get();
-    if (state.activeSchemaId === DEFAULT_SCHEMA_ID) return;
+    if (!state.activeSchemaId || state.activeSchemaId === DEFAULT_SCHEMA_ID) return;
     const boardState = getBoardState(state);
     set({ 
       history: [...state.history.slice(-19), JSON.parse(JSON.stringify(boardState))],
@@ -477,7 +481,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   updatePlayerPosition: (playerId, x, y) => {
     const { activeRotation, activePhase, activeNode, positions, userRole, schemas, activeSchemaId, saveChanges } = get();
-    if (userRole === 'VIEWER' || activeSchemaId === DEFAULT_SCHEMA_ID) return;
+    if (userRole === 'VIEWER' || !activeSchemaId || activeSchemaId === DEFAULT_SCHEMA_ID) return;
     
     const currentSchema = schemas.find(s => s.id === activeSchemaId);
     const isReadOnly = currentSchema?.isReadOnly;
@@ -866,13 +870,9 @@ export const useStore = create<AppState>((set, get) => ({
   createSchema: (name) => {
     try {
       const state = get();
-      const boardState = getBoardState(state);
       
-      // If we are on the default schema, we want to copy its ORIGINAL state, not the current one
-      let stateToCopy = boardState;
-      if (state.activeSchemaId === DEFAULT_SCHEMA_ID) {
-        stateToCopy = getDefaultSchema().state;
-      }
+      // Always copy from the original default JSON state
+      const stateToCopy = getBoardState(DEFAULT_SCHEMA_JSON as any);
 
       const newSchema: SavedSchema = {
         id: `s_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
@@ -882,13 +882,18 @@ export const useStore = create<AppState>((set, get) => ({
         isReadOnly: false
       };
       
-      const updated = [newSchema, ...state.schemas];
+      // Only save user schemas (no default schema in localStorage)
+      const userSchemas = state.schemas.filter(s => s.id !== DEFAULT_SCHEMA_ID);
+      const updated = [newSchema, ...userSchemas];
       set({ 
+        ...stateToCopy,
         schemas: updated, 
         activeSchemaId: newSchema.id, 
         isReadOnly: false,
         userRole: 'OWNER',
-        checkpoint: JSON.parse(JSON.stringify(boardState)) // Set checkpoint to current state
+        history: [],
+        future: [],
+        checkpoint: JSON.parse(JSON.stringify(stateToCopy))
       });
       
       localStorage.setItem('vb_schemas', JSON.stringify(updated));
@@ -911,7 +916,6 @@ export const useStore = create<AppState>((set, get) => ({
     
     if (nextActiveId) {
       localStorage.setItem('vb_active_schema_id', nextActiveId);
-      // If we deleted the active one, load the new active one
       if (isActiveDeleted) {
         const nextSchema = updated[0];
         if (nextSchema) {
@@ -921,7 +925,16 @@ export const useStore = create<AppState>((set, get) => ({
     } else {
       localStorage.removeItem('vb_active_schema_id');
       if (isActiveDeleted) {
-        state.resetAll();
+        // No schemas left — go back to default JSON state
+        const defaultState = getBoardState(DEFAULT_SCHEMA_JSON as any);
+        set({ 
+          ...defaultState, 
+          activeSchemaId: null, 
+          isReadOnly: false,
+          history: [],
+          future: [],
+          checkpoint: JSON.parse(JSON.stringify(defaultState))
+        });
       }
     }
   },
@@ -931,13 +944,7 @@ export const useStore = create<AppState>((set, get) => ({
     if (!Array.isArray(schemas)) return;
     const schema = schemas.find(s => s.id === id);
     if (schema) {
-      if (id === DEFAULT_SCHEMA_ID) {
-        // Always load the fresh default schema state
-        const freshDefault = getDefaultSchema();
-        get().loadState(freshDefault.state, 'OWNER');
-      } else {
-        get().loadState(schema.state, 'OWNER');
-      }
+      get().loadState(schema.state, 'OWNER');
       set({ activeSchemaId: id, isReadOnly: !!schema.isReadOnly });
       localStorage.setItem('vb_active_schema_id', id);
     }
