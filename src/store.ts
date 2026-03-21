@@ -484,13 +484,10 @@ export const useStore = create<AppState>((set, get) => ({
 
     const currentNodes = activePhase === 'RECEIVE' ? RECEIVE_NODES : SERVE_NODES;
     
-    // If we are in BASE, we should NOT be able to move players.
-    let effectiveNode = activeNode;
-    if (activeNode === 'BASE') {
-      effectiveNode = currentNodes[1]; // Transition to PASS or SERVE
-      set({ activeNode: effectiveNode });
-    }
+    // BASE node is completely locked - no dragging allowed at all
+    if (activeNode === 'BASE') return;
 
+    const effectiveNode = activeNode;
     const effectiveNodeIndex = currentNodes.indexOf(effectiveNode as any);
     if (effectiveNodeIndex === -1) return;
 

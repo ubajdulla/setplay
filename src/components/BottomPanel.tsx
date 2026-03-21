@@ -143,13 +143,15 @@ export const BottomPanel: React.FC<{ style?: React.CSSProperties }> = React.memo
         {/* Right: Navigation Arrows */}
         <div className="flex items-center gap-2 shrink-0 z-10">
           <button
-            onClick={() => stepSequence(-1)}
+            onClick={(e) => { e.preventDefault(); stepSequence(-1); }}
+            onMouseDown={(e) => e.preventDefault()}
             className="w-10 h-10 flex items-center justify-center bg-gray-50 hover:bg-black/[0.05] rounded-full text-gray-600 transition-none border border-black/5"
           >
             <ChevronLeft size={20} />
           </button>
           <button
-            onClick={() => stepSequence(1)}
+            onClick={(e) => { e.preventDefault(); stepSequence(1); }}
+            onMouseDown={(e) => e.preventDefault()}
             className="w-10 h-10 flex items-center justify-center bg-gray-50 hover:bg-black/[0.05] rounded-full text-gray-600 transition-none border border-black/5"
           >
             <ChevronRight size={20} />
