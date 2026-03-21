@@ -49,6 +49,7 @@ interface AppState extends BoardState {
   loadState: (state: BoardState, role?: UserRole) => void;
   resetAll: () => void;
   resetNode: () => void;
+  resetNodeToBase: () => void;
   undo: () => void;
   redo: () => void;
   saveToHistory: () => void;
@@ -214,6 +215,7 @@ export const useStore = create<AppState>((set, get) => ({
   activeRotation: 'R1' as Rotation,
   activePhase: 'SERVE' as Phase,
   activeNode: 'BASE' as TimelineNode,
+  saveChanges: (() => { try { const v = localStorage.getItem('vb_save_changes'); return v === null ? true : v === 'true'; } catch(e) { return true; } })(),
   checkpoint: { ...getBoardState(DEFAULT_SCHEMA_JSON as any), activeRotation: 'R1' as Rotation, activePhase: 'SERVE' as Phase, activeNode: 'BASE' as TimelineNode },
   history: [],
   future: [],
@@ -348,18 +350,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setNode: (activeNode) => {
-    const { saveChanges, checkpoint } = get();
-    if (!saveChanges && checkpoint) {
-      const revertedState = JSON.parse(JSON.stringify(checkpoint));
-      const newState = { ...revertedState, activeNode };
-      set({ ...newState, checkpoint: JSON.parse(JSON.stringify(newState)) });
-    } else {
-      set({ activeNode });
-      if (saveChanges) {
-        const { history, future, checkpoint: oldCp, schemas, activeSchemaId, ...current } = get();
-        set({ checkpoint: JSON.parse(JSON.stringify(current)) });
-      }
-    }
+    set({ activeNode });
     get().saveCurrentSchema();
   },
 
@@ -371,6 +362,8 @@ export const useStore = create<AppState>((set, get) => ({
     } else {
       set({ saveChanges });
     }
+    // Persist saveChanges preference to localStorage
+    try { localStorage.setItem('vb_save_changes', String(saveChanges)); } catch(e) {}
   },
 
   setUserRole: (userRole) => set({ userRole }),
@@ -504,20 +497,8 @@ export const useStore = create<AppState>((set, get) => ({
     const newPositions = JSON.parse(JSON.stringify(positions));
     if (!newPositions[activeRotation]?.[activePhase]?.[effectiveNode]) return;
     
-    // Update the effective node and mark as modified
+    // Update ONLY the effective node - no cascade to subsequent nodes
     newPositions[activeRotation][activePhase][effectiveNode][playerId] = { x, y, modified: !isReadOnly && saveChanges };
-
-    // AGGRESSIVE CASCADE: 
-    for (let i = effectiveNodeIndex + 1; i < currentNodes.length; i++) {
-      const nextNode = currentNodes[i];
-      if (newPositions[activeRotation][activePhase][nextNode]) {
-        newPositions[activeRotation][activePhase][nextNode][playerId] = { 
-          x, 
-          y, 
-          modified: false 
-        };
-      }
-    }
 
     set({ positions: newPositions });
     
@@ -845,26 +826,29 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   resetNode: () => {
-    if (get().userRole === 'VIEWER' || get().activeSchemaId === DEFAULT_SCHEMA_ID) return;
-    get().saveToHistory();
-    const { activeRotation, activePhase, activeNode, positions, onFieldPositions, players, benchPlayers } = get();
+    if (get().userRole === 'VIEWER' || !get().activeSchemaId || get().activeSchemaId === DEFAULT_SCHEMA_ID) return;
+    // Restore current node positions from last saved checkpoint
+    const { activeRotation, activePhase, activeNode, checkpoint, positions } = get();
+    if (!checkpoint) return;
     const newPositions = JSON.parse(JSON.stringify(positions));
-    const rIdx = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6'].indexOf(activeRotation);
+    const savedNodePositions = checkpoint.positions?.[activeRotation]?.[activePhase]?.[activeNode];
+    if (savedNodePositions) {
+      newPositions[activeRotation][activePhase][activeNode] = JSON.parse(JSON.stringify(savedNodePositions));
+    }
+    set({ positions: newPositions });
+    get().saveCurrentSchema();
+  },
 
-    players.forEach(player => {
-      const slot = onFieldPositions[activeRotation]?.[activePhase]?.[player.id];
-      if (slot) {
-        const initialZoneIndex = SLOT_TO_INDEX[slot];
-        const currentZoneIndex = (initialZoneIndex + rIdx) % 6;
-        const currentSlot = INDEX_TO_SLOT[currentZoneIndex];
-        const coords = SLOT_COORDS[currentSlot];
-        newPositions[activeRotation][activePhase][activeNode][player.id] = { x: coords.x, y: coords.y, modified: false };
-      } else {
-        const benchIdx = benchPlayers[activeRotation][activePhase].indexOf(player.id);
-        newPositions[activeRotation][activePhase][activeNode][player.id] = { x: -130, y: 450 + (benchIdx - 2.5) * 110, modified: false };
-      }
-    });
-
+  resetNodeToBase: () => {
+    if (get().userRole === 'VIEWER' || !get().activeSchemaId || get().activeSchemaId === DEFAULT_SCHEMA_ID) return;
+    // Reset current node positions to match BASE node positions
+    const { activeRotation, activePhase, activeNode, positions, onFieldPositions, players, benchPlayers } = get();
+    if (activeNode === 'BASE') return;
+    const newPositions = JSON.parse(JSON.stringify(positions));
+    const basePositions = newPositions[activeRotation][activePhase]['BASE'];
+    if (basePositions) {
+      newPositions[activeRotation][activePhase][activeNode] = JSON.parse(JSON.stringify(basePositions));
+    }
     set({ positions: newPositions });
     get().saveCurrentSchema();
   },

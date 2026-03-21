@@ -29,11 +29,12 @@ const TOOLBAR_COLORS = [
 export const Toolbar: React.FC<{ style?: React.CSSProperties }> = React.memo(({ style }) => {
   const { 
     activeTool, setActiveTool, 
-    undo, redo, history, future, resetNode,
+    undo, redo, history, future, resetNode, resetNodeToBase,
     userRole, drawingColor, setDrawingColor,
     showBall, toggleBall,
     saveChanges, setSaveChanges,
-    activeSchemaId, schemas
+    activeSchemaId, schemas,
+    activeNode
   } = useStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -250,7 +251,7 @@ export const Toolbar: React.FC<{ style?: React.CSSProperties }> = React.memo(({ 
 
           <div className="h-6 w-px bg-black/5 shrink-0" />
 
-          {/* Ball & Reset */}
+          {/* Ball, Reset & Reset to Base */}
           <div className="flex items-center gap-1">
             <button 
               onClick={toggleBall}
@@ -271,9 +272,17 @@ export const Toolbar: React.FC<{ style?: React.CSSProperties }> = React.memo(({ 
               onClick={resetNode}
               disabled={isReadOnly}
               className="p-2 hover:bg-black/[0.05] text-orange-600 rounded-lg transition-none disabled:opacity-20 disabled:cursor-not-allowed"
-              title="Reset Node"
+              title="Reset Node to last saved"
             >
               <RotateCcw size={18} />
+            </button>
+            <button 
+              onClick={resetNodeToBase}
+              disabled={isReadOnly || activeNode === 'BASE'}
+              className="p-2 hover:bg-black/[0.05] text-red-500 rounded-lg transition-none disabled:opacity-20 disabled:cursor-not-allowed"
+              title="Reset Node to BASE positions"
+            >
+              <Trash2 size={18} />
             </button>
           </div>
 
