@@ -484,7 +484,8 @@ export const useStore = create<AppState>((set, get) => ({
 
     const currentNodes = activePhase === 'RECEIVE' ? RECEIVE_NODES : SERVE_NODES;
     
-    // BASE node is completely locked - no dragging allowed at all
+    // BASE node is spring-only - dragging is allowed visually but no position is saved
+    // The spring effect is handled in Court.tsx handleDragEnd
     if (activeNode === 'BASE') return;
 
     const effectiveNode = activeNode;

@@ -133,7 +133,9 @@ export const Court: React.FC<{ width: number; height: number }> = React.memo(({ 
     
     const currentSchema = useStore.getState().schemas.find(s => s.id === useStore.getState().activeSchemaId);
     const isReadOnly = currentSchema?.isReadOnly;
-    const isSpringMode = !useStore.getState().saveChanges || isReadOnly;
+    const currentActiveNode = useStore.getState().activeNode;
+    // Spring mode: BASE node always springs back, or when saveChanges is off, or readOnly
+    const isSpringMode = currentActiveNode === 'BASE' || !useStore.getState().saveChanges || isReadOnly;
 
     if (isSpringMode && startPos) {
       // Reset position (Spring effect)
