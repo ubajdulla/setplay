@@ -687,9 +687,31 @@ export const Court: React.FC<{ width: number; height: number }> = React.memo(({ 
               }}
               draggable={userRole !== 'VIEWER' && activeTool === 'CURSOR'}
               listening={activeTool !== 'ERASER'}
-              onDragStart={() => setIsDragging(true)}
-              onDragMove={(e) => updateBallPosition(e.target.x(), e.target.y())}
-              onDragEnd={() => setIsDragging(false)}
+              onDragStart={(e) => {
+                setIsDragging(true);
+                (e.target as any)._ballStartX = e.target.x();
+                (e.target as any)._ballStartY = e.target.y();
+              }}
+              onDragMove={(e) => {
+                if (activeNode !== 'BASE') {
+                  updateBallPosition(e.target.x(), e.target.y());
+                }
+              }}
+              onDragEnd={(e) => {
+                const isBaseNode = useStore.getState().activeNode === 'BASE';
+                if (isBaseNode) {
+                  const startX = (e.target as any)._ballStartX;
+                  const startY = (e.target as any)._ballStartY;
+                  e.target.to({
+                    x: startX,
+                    y: startY,
+                    duration: 0.2,
+                    onFinish: () => setIsDragging(false)
+                  });
+                } else {
+                  setIsDragging(false);
+                }
+              }}
               onMouseEnter={(e) => {
                 const stage = e.target.getStage();
                 if (stage) stage.container().style.cursor = 'pointer';
