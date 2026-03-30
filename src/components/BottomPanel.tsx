@@ -6,7 +6,7 @@
 import React, { useCallback } from 'react';
 import { useStore } from '../store';
 import { Rotation, Phase, RECEIVE_NODES, SERVE_NODES, TimelineNode } from '../types';
-import { ChevronRight, ChevronLeft, FolderOpen } from 'lucide-react';
+import { ChevronRight, ChevronLeft } from 'lucide-react';
 
 export const BottomPanel: React.FC<{ style?: React.CSSProperties }> = React.memo(({ style }) => {
   const { 
@@ -26,10 +26,6 @@ export const BottomPanel: React.FC<{ style?: React.CSSProperties }> = React.memo
   const getNodesForPhase = (phase: Phase) => phase === 'RECEIVE' ? RECEIVE_NODES : SERVE_NODES;
   const currentNodes = getNodesForPhase(activePhase);
 
-  const currentSchema = schemas.find(s => s.id === activeSchemaId);
-  const isReadOnly = currentSchema?.isReadOnly;
-
-  // Circular Carousel Logic
   const getFullSequence = useCallback(() => {
     const sequence: { rotation: Rotation; phase: Phase; node: TimelineNode }[] = [];
     rotations.forEach(r => {
@@ -48,12 +44,9 @@ export const BottomPanel: React.FC<{ style?: React.CSSProperties }> = React.memo
     const currentIndex = sequence.findIndex(
       s => s.rotation === activeRotation && s.phase === activePhase && s.node === activeNode
     );
-    
     if (currentIndex === -1) return;
-
     let nextIndex = (currentIndex + dir) % sequence.length;
     if (nextIndex < 0) nextIndex = sequence.length - 1;
-
     const next = sequence[nextIndex];
     setRotation(next.rotation);
     setPhase(next.phase);
@@ -64,16 +57,16 @@ export const BottomPanel: React.FC<{ style?: React.CSSProperties }> = React.memo
 
   return (
     <div 
-      style={{ ...style, height: '160px' }}
+      style={{ ...style }}
       className="bg-white rounded-2xl border border-black/10 shadow-2xl overflow-hidden flex flex-col transition-none"
     >
-      {/* Row 1: Rotations (R1-R6) - Individual Buttons */}
-      <div className="flex justify-between items-center px-2 pt-2 pb-1">
+      {/* Row 1: Rotations */}
+      <div className="flex justify-between items-center px-1 pt-2 pb-1">
         {rotations.map((rot) => (
           <button
             key={rot}
             onClick={() => setRotation(rot)}
-            className={`flex-1 mx-2 py-2 text-xs font-black tracking-widest rounded-lg transition-none ${
+            className={`flex-1 mx-0.5 py-2 text-[10px] font-black tracking-widest rounded-lg transition-none ${
               activeRotation === rot 
                 ? 'bg-gray-900 text-white' 
                 : 'bg-gray-50 text-gray-400 hover:bg-black/[0.05]'
@@ -84,77 +77,61 @@ export const BottomPanel: React.FC<{ style?: React.CSSProperties }> = React.memo
         ))}
       </div>
 
-      {/* Row 2: Phase, Timeline Nodes, Arrows */}
-      <div className="flex-1 flex items-center justify-between px-6 gap-8 relative">
-        {/* Left: Phase Toggle */}
-        <div className="flex flex-col gap-1 shrink-0 z-10">
-          <div className="flex bg-gray-100 p-1 rounded-xl">
-            {phases.map((phase) => (
-              <button
-                key={phase}
-                onClick={() => setPhase(phase)}
-                className={`px-4 py-2 text-[11px] font-black rounded-lg transition-none ${
-                  activePhase === phase 
-                    ? 'bg-white shadow-md' 
-                    : 'text-gray-400 hover:bg-black/[0.05]'
-                }`}
-                style={{ color: activePhase === phase ? (phase === 'RECEIVE' ? '#ff9f43' : '#3b82f6') : undefined }}
-              >
-                {phase}
-              </button>
-            ))}
-          </div>
+      {/* Row 2: Phase + Nodes + Arrows */}
+      <div className="flex items-center px-2 pb-2 gap-1">
+        {/* Phase toggle */}
+        <div className="flex bg-gray-100 p-0.5 rounded-xl shrink-0">
+          {phases.map((phase) => (
+            <button
+              key={phase}
+              onClick={() => setPhase(phase)}
+              className={`px-2 py-1.5 text-[9px] font-black rounded-lg transition-none ${
+                activePhase === phase ? 'bg-white shadow-md' : 'text-gray-400'
+              }`}
+              style={{ color: activePhase === phase ? (phase === 'RECEIVE' ? '#ff9f43' : '#3b82f6') : undefined }}
+            >
+              {phase === 'RECEIVE' ? 'RCV' : 'SRV'}
+            </button>
+          ))}
         </div>
 
-        {/* Center: Timeline & Nodes */}
-        <div className="flex-1 flex items-center justify-center relative min-w-0">
-          {/* Timeline Line */}
+        {/* Nodes */}
+        <div className="flex-1 flex items-center justify-between gap-0.5 relative">
           <div 
-            className="absolute h-1 rounded-full opacity-20" 
-            style={{ 
-              backgroundColor: phaseColor,
-              width: 'calc(100% - 40px)',
-              left: '20px'
-            }} 
+            className="absolute h-0.5 rounded-full opacity-20 top-1/2 -translate-y-1/2"
+            style={{ backgroundColor: phaseColor, left: '4px', right: '4px' }}
           />
-          
-          <div className="flex items-center justify-between w-full relative z-10">
-            {currentNodes.map((node) => (
-              <button
-                key={node}
-                onClick={() => setNode(node as any)}
-                className={`px-4 py-2 rounded-lg text-[10px] font-black whitespace-nowrap transition-none border-2 ${
-                  activeNode === node 
-                    ? 'shadow-sm' 
-                    : 'bg-white hover:bg-black/[0.05]'
-                }`}
-                style={{ 
-                  borderColor: activeNode === node ? phaseColor : 'transparent',
-                  backgroundColor: activeNode === node ? phaseColor : undefined,
-                  color: activeNode === node ? 'white' : '#9ca3af'
-                }}
-              >
-                {node}
-              </button>
-            ))}
-          </div>
+          {currentNodes.map((node) => (
+            <button
+              key={node}
+              onClick={() => setNode(node as any)}
+              className={`flex-1 py-1.5 rounded-lg text-[8px] font-black whitespace-nowrap transition-none border-2 z-10`}
+              style={{ 
+                borderColor: activeNode === node ? phaseColor : 'transparent',
+                backgroundColor: activeNode === node ? phaseColor : 'white',
+                color: activeNode === node ? 'white' : '#9ca3af'
+              }}
+            >
+              {node}
+            </button>
+          ))}
         </div>
 
-        {/* Right: Navigation Arrows */}
-        <div className="flex items-center gap-2 shrink-0 z-10">
+        {/* Arrows */}
+        <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={(e) => { e.preventDefault(); stepSequence(-1); }}
             onMouseDown={(e) => e.preventDefault()}
-            className="w-10 h-10 flex items-center justify-center bg-gray-50 hover:bg-black/[0.05] rounded-full text-gray-600 transition-none border border-black/5"
+            className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-full text-gray-600 border border-black/5"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={16} />
           </button>
           <button
             onClick={(e) => { e.preventDefault(); stepSequence(1); }}
             onMouseDown={(e) => e.preventDefault()}
-            className="w-10 h-10 flex items-center justify-center bg-gray-50 hover:bg-black/[0.05] rounded-full text-gray-600 transition-none border border-black/5"
+            className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-full text-gray-600 border border-black/5"
           >
-            <ChevronRight size={20} />
+            <ChevronRight size={16} />
           </button>
         </div>
       </div>
