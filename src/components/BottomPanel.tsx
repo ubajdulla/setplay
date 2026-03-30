@@ -9,67 +9,41 @@ import { Rotation, Phase, RECEIVE_NODES, SERVE_NODES, TimelineNode } from '../ty
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 
 export const BottomPanel: React.FC<{ style?: React.CSSProperties }> = React.memo(({ style }) => {
-  const { 
-    activeRotation, 
-    activePhase, 
-    activeNode, 
-    setRotation, 
-    setPhase, 
-    setNode,
-    activeSchemaId,
-    schemas
-  } = useStore();
+  const { activeRotation, activePhase, activeNode, setRotation, setPhase, setNode } = useStore();
 
   const rotations: Rotation[] = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6'];
   const phases: Phase[] = ['SERVE', 'RECEIVE'];
-  
   const getNodesForPhase = (phase: Phase) => phase === 'RECEIVE' ? RECEIVE_NODES : SERVE_NODES;
   const currentNodes = getNodesForPhase(activePhase);
+  const phaseColor = activePhase === 'RECEIVE' ? '#ff9f43' : '#3b82f6';
 
   const getFullSequence = useCallback(() => {
     const sequence: { rotation: Rotation; phase: Phase; node: TimelineNode }[] = [];
-    rotations.forEach(r => {
-      phases.forEach(p => {
-        const nodes = getNodesForPhase(p);
-        nodes.forEach(n => {
-          sequence.push({ rotation: r, phase: p, node: n });
-        });
-      });
-    });
+    rotations.forEach(r => phases.forEach(p => getNodesForPhase(p).forEach(n => sequence.push({ rotation: r, phase: p, node: n }))));
     return sequence;
   }, []);
 
   const stepSequence = useCallback((dir: number) => {
     const sequence = getFullSequence();
-    const currentIndex = sequence.findIndex(
-      s => s.rotation === activeRotation && s.phase === activePhase && s.node === activeNode
-    );
+    const currentIndex = sequence.findIndex(s => s.rotation === activeRotation && s.phase === activePhase && s.node === activeNode);
     if (currentIndex === -1) return;
-    let nextIndex = (currentIndex + dir) % sequence.length;
-    if (nextIndex < 0) nextIndex = sequence.length - 1;
+    let nextIndex = (currentIndex + dir + sequence.length) % sequence.length;
     const next = sequence[nextIndex];
     setRotation(next.rotation);
     setPhase(next.phase);
     setNode(next.node);
   }, [activeRotation, activePhase, activeNode, setRotation, setPhase, setNode, getFullSequence]);
 
-  const phaseColor = activePhase === 'RECEIVE' ? '#ff9f43' : '#3b82f6';
-
   return (
-    <div 
-      style={{ ...style }}
-      className="bg-white rounded-2xl border border-black/10 shadow-2xl overflow-hidden flex flex-col transition-none"
-    >
+    <div style={style} className="bg-white rounded-2xl border border-black/10 shadow-2xl overflow-hidden flex flex-col">
       {/* Row 1: Rotations */}
-      <div className="flex justify-between items-center px-1 pt-2 pb-1">
+      <div className="flex items-center px-1.5 pt-1.5 pb-1 gap-1">
         {rotations.map((rot) => (
           <button
             key={rot}
             onClick={() => setRotation(rot)}
-            className={`flex-1 mx-0.5 py-2 text-[10px] font-black tracking-widest rounded-lg transition-none ${
-              activeRotation === rot 
-                ? 'bg-gray-900 text-white' 
-                : 'bg-gray-50 text-gray-400 hover:bg-black/[0.05]'
+            className={`flex-1 py-2 text-[10px] font-black tracking-widest rounded-lg transition-none ${
+              activeRotation === rot ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-400'
             }`}
           >
             {rot}
@@ -78,16 +52,14 @@ export const BottomPanel: React.FC<{ style?: React.CSSProperties }> = React.memo
       </div>
 
       {/* Row 2: Phase + Nodes + Arrows */}
-      <div className="flex items-center px-2 pb-2 gap-1">
-        {/* Phase toggle */}
+      <div className="flex items-center px-1.5 pb-1.5 gap-1.5">
+        {/* Phase */}
         <div className="flex bg-gray-100 p-0.5 rounded-xl shrink-0">
           {phases.map((phase) => (
             <button
               key={phase}
               onClick={() => setPhase(phase)}
-              className={`px-2 py-1.5 text-[9px] font-black rounded-lg transition-none ${
-                activePhase === phase ? 'bg-white shadow-md' : 'text-gray-400'
-              }`}
+              className={`px-2 py-1.5 text-[9px] font-black rounded-lg transition-none ${activePhase === phase ? 'bg-white shadow-sm' : 'text-gray-400'}`}
               style={{ color: activePhase === phase ? (phase === 'RECEIVE' ? '#ff9f43' : '#3b82f6') : undefined }}
             >
               {phase === 'RECEIVE' ? 'RCV' : 'SRV'}
@@ -96,20 +68,20 @@ export const BottomPanel: React.FC<{ style?: React.CSSProperties }> = React.memo
         </div>
 
         {/* Nodes */}
-        <div className="flex-1 flex items-center justify-between gap-0.5 relative">
-          <div 
+        <div className="flex-1 flex items-center gap-0.5 relative">
+          <div
             className="absolute h-0.5 rounded-full opacity-20 top-1/2 -translate-y-1/2"
-            style={{ backgroundColor: phaseColor, left: '4px', right: '4px' }}
+            style={{ backgroundColor: phaseColor, left: 2, right: 2 }}
           />
           {currentNodes.map((node) => (
             <button
               key={node}
               onClick={() => setNode(node as any)}
-              className={`flex-1 py-1.5 rounded-lg text-[8px] font-black whitespace-nowrap transition-none border-2 z-10`}
-              style={{ 
+              className="flex-1 py-2 rounded-lg text-[8px] font-black whitespace-nowrap transition-none border-2 relative z-10"
+              style={{
                 borderColor: activeNode === node ? phaseColor : 'transparent',
                 backgroundColor: activeNode === node ? phaseColor : 'white',
-                color: activeNode === node ? 'white' : '#9ca3af'
+                color: activeNode === node ? 'white' : '#9ca3af',
               }}
             >
               {node}
