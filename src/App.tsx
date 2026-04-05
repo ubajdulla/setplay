@@ -49,8 +49,23 @@ export default function App() {
       const { activeRotation, activePhase, activeNode, setNode, undo, redo, isDragging } = useStore.getState();
       if (isDragging) return;
       if (e.ctrlKey || e.metaKey) {
-        if (e.key === 'z') { e.preventDefault(); undo(); }
-        else if (e.key === 'y') { e.preventDefault(); redo(); }
+        if (e.key === 'z') { e.preventDefault(); undo(); return; }
+        if (e.key === 'y') { e.preventDefault(); redo(); return; }
+        // Ctrl+Arrow = navigate rotations (same node, same phase)
+        const rotations: any[] = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6'];
+        const { activeRotation } = useStore.getState();
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          const rIdx = rotations.indexOf(activeRotation);
+          useStore.getState().setRotationKeepNode(rotations[(rIdx + 1) % 6]);
+          return;
+        }
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          const rIdx = rotations.indexOf(activeRotation);
+          useStore.getState().setRotationKeepNode(rotations[(rIdx - 1 + 6) % 6]);
+          return;
+        }
         return;
       }
       const nodes = activePhase === 'RECEIVE' ? RECEIVE_NODES : SERVE_NODES;
@@ -59,11 +74,11 @@ export default function App() {
       if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
         if (currentIndex < nodes.length - 1) { setNode(nodes[currentIndex + 1]); }
         else if (activePhase === 'SERVE') { useStore.getState().setPhase('RECEIVE'); useStore.getState().setNode(RECEIVE_NODES[0]); }
-        else { const rIdx = rotations.indexOf(activeRotation); useStore.getState().setRotation(rotations[(rIdx + 1) % 6]); useStore.getState().setPhase('SERVE'); useStore.getState().setNode(SERVE_NODES[0]); }
+        else { const rIdx = rotations.indexOf(activeRotation); useStore.getState().setRotationKeepNode(rotations[(rIdx + 1) % 6]); useStore.getState().setPhase('SERVE'); useStore.getState().setNode(SERVE_NODES[0]); }
       } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
         if (currentIndex > 0) { setNode(nodes[currentIndex - 1]); }
         else if (activePhase === 'RECEIVE') { useStore.getState().setPhase('SERVE'); useStore.getState().setNode(SERVE_NODES[SERVE_NODES.length - 1]); }
-        else { const rIdx = rotations.indexOf(activeRotation); useStore.getState().setRotation(rotations[(rIdx - 1 + 6) % 6]); useStore.getState().setPhase('RECEIVE'); useStore.getState().setNode(RECEIVE_NODES[RECEIVE_NODES.length - 1]); }
+        else { const rIdx = rotations.indexOf(activeRotation); useStore.getState().setRotationKeepNode(rotations[(rIdx - 1 + 6) % 6]); useStore.getState().setPhase('RECEIVE'); useStore.getState().setNode(RECEIVE_NODES[RECEIVE_NODES.length - 1]); }
       }
     };
     window.addEventListener('keydown', handleKeyDown);

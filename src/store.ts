@@ -35,6 +35,7 @@ interface AppState extends BoardState {
   toggleRightPanel: () => void;
   setIsDragging: (value: boolean) => void;
   setRotation: (r: Rotation) => void;
+  setRotationKeepNode: (r: Rotation) => void;
   setPhase: (p: Phase) => void;
   setNode: (n: TimelineNode) => void;
   setSaveChanges: (value: boolean) => void;
@@ -46,6 +47,7 @@ interface AppState extends BoardState {
   swapPlayers: (id1: string, id2: string) => void;
   setPlayerPosition: (playerId: string, slot: Slot | null) => void;
   toggleSetting: (key: keyof BoardState['toggles']) => void;
+  toggleNodeSkip: (phase: string, node: string) => void;
   loadState: (state: BoardState, role?: UserRole) => void;
   resetAll: () => void;
   resetNode: () => void;
@@ -179,6 +181,10 @@ const getBaseState = (): BoardState => {
       showBench: true,
       overlapLinks: true,
     },
+    skippedNodes: {
+      SERVE: [] as string[],
+      RECEIVE: [] as string[],
+    },
     courtZoom: 1,
     drawings,
     showBall: false,
@@ -206,7 +212,8 @@ const getBoardState = (state: any): BoardState => {
     drawingWidth: state.drawingWidth || base.drawingWidth,
     isDashed: state.isDashed !== undefined ? state.isDashed : base.isDashed,
     showBall: state.showBall !== undefined ? state.showBall : base.showBall,
-    ballPositions: state.ballPositions || base.ballPositions
+    ballPositions: state.ballPositions || base.ballPositions,
+    skippedNodes: state.skippedNodes || { SERVE: [], RECEIVE: [] },
   };
 };
 
@@ -260,8 +267,8 @@ export const useStore = create<AppState>((set, get) => ({
     }
   })(),
   isDragging: false,
-  leftPanelOpen: true,
-  rightPanelOpen: true,
+  leftPanelOpen: false,
+  rightPanelOpen: false,
   toggleLeftPanel: () => set((state) => ({ leftPanelOpen: !state.leftPanelOpen })),
   toggleRightPanel: () => set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
 
@@ -307,6 +314,12 @@ export const useStore = create<AppState>((set, get) => ({
       future: newFuture,
       checkpoint: get().saveChanges ? JSON.parse(JSON.stringify(next)) : checkpoint
     });
+    get().saveCurrentSchema();
+  },
+
+  setRotationKeepNode: (activeRotation) => {
+    // Change rotation but keep current phase and node
+    set({ activeRotation });
     get().saveCurrentSchema();
   },
 
@@ -799,6 +812,17 @@ export const useStore = create<AppState>((set, get) => ({
     set(state => ({
       toggles: { ...state.toggles, [key]: !state.toggles[key] }
     }));
+    get().saveCurrentSchema();
+  },
+
+  toggleNodeSkip: (phase, node) => {
+    if (get().userRole === 'VIEWER') return;
+    set(state => {
+      const current = (state as any).skippedNodes || { SERVE: [], RECEIVE: [] };
+      const list: string[] = current[phase] || [];
+      const newList = list.includes(node) ? list.filter((n: string) => n !== node) : [...list, node];
+      return { skippedNodes: { ...current, [phase]: newList } };
+    });
     get().saveCurrentSchema();
   },
 

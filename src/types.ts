@@ -73,6 +73,7 @@ export interface BoardState {
   drawings: Record<Rotation, Record<Phase, Record<string, Drawing[]>>>;
   showBall: boolean;
   ballPositions: Record<Rotation, Record<Phase, Record<string, { x: number; y: number }>>>;
+  skippedNodes: { SERVE: string[]; RECEIVE: string[] };
 }
 
 export interface SavedSchema {

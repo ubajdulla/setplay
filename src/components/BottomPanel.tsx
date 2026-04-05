@@ -10,18 +10,31 @@ import { ChevronRight, ChevronLeft } from 'lucide-react';
 
 export const BottomPanel: React.FC<{ style?: React.CSSProperties }> = React.memo(({ style }) => {
   const { activeRotation, activePhase, activeNode, setRotation, setPhase, setNode } = useStore();
+  const skippedNodes = (useStore as any)(s => s.skippedNodes) || { SERVE: [], RECEIVE: [] };
 
   const rotations: Rotation[] = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6'];
   const phases: Phase[] = ['SERVE', 'RECEIVE'];
-  const getNodesForPhase = (phase: Phase) => phase === 'RECEIVE' ? RECEIVE_NODES : SERVE_NODES;
+  const ALL_SERVE_NODES = [...SERVE_NODES];
+  const ALL_RECEIVE_NODES = [...RECEIVE_NODES];
+
+  const getNodesForPhase = useCallback((phase: Phase) => {
+    const all = phase === 'RECEIVE' ? ALL_RECEIVE_NODES : ALL_SERVE_NODES;
+    const skipped: string[] = skippedNodes[phase] || [];
+    return all.filter(n => !skipped.includes(n));
+  }, [skippedNodes]);
+
   const currentNodes = getNodesForPhase(activePhase);
   const phaseColor = activePhase === 'RECEIVE' ? '#ff9f43' : '#3b82f6';
 
   const getFullSequence = useCallback(() => {
     const sequence: { rotation: Rotation; phase: Phase; node: TimelineNode }[] = [];
-    rotations.forEach(r => phases.forEach(p => getNodesForPhase(p).forEach(n => sequence.push({ rotation: r, phase: p, node: n }))));
+    rotations.forEach(r => {
+      phases.forEach(p => {
+        getNodesForPhase(p).forEach(n => sequence.push({ rotation: r, phase: p, node: n as TimelineNode }));
+      });
+    });
     return sequence;
-  }, []);
+  }, [skippedNodes]);
 
   const stepSequence = useCallback((dir: number) => {
     const sequence = getFullSequence();
@@ -37,12 +50,12 @@ export const BottomPanel: React.FC<{ style?: React.CSSProperties }> = React.memo
   return (
     <div style={style} className="bg-white rounded-2xl border border-black/10 shadow-2xl overflow-hidden flex flex-col">
       {/* Row 1: Rotations */}
-      <div className="flex items-center px-1.5 pt-1.5 pb-1 gap-1">
+      <div className="flex items-center px-2 pt-2 pb-1.5 gap-1">
         {rotations.map((rot) => (
           <button
             key={rot}
             onClick={() => setRotation(rot)}
-            className={`flex-1 py-2 text-[10px] font-black tracking-widest rounded-lg transition-none ${
+            className={`flex-1 py-2.5 text-xs font-black tracking-widest rounded-lg transition-none ${
               activeRotation === rot ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-400'
             }`}
           >
@@ -51,33 +64,41 @@ export const BottomPanel: React.FC<{ style?: React.CSSProperties }> = React.memo
         ))}
       </div>
 
+      {/* Divider */}
+      <div className="mx-3 h-px bg-black/5" />
+
       {/* Row 2: Phase + Nodes + Arrows */}
-      <div className="flex items-center px-1.5 pb-1.5 gap-1.5">
-        {/* Phase */}
-        <div className="flex bg-gray-100 p-0.5 rounded-xl shrink-0">
+      <div className="flex items-center px-2 py-2 gap-2">
+        {/* Phase toggle - more prominent */}
+        <div className="flex bg-gray-100 p-1 rounded-xl shrink-0">
           {phases.map((phase) => (
             <button
               key={phase}
               onClick={() => setPhase(phase)}
-              className={`px-2 py-1.5 text-[9px] font-black rounded-lg transition-none ${activePhase === phase ? 'bg-white shadow-sm' : 'text-gray-400'}`}
+              className={`px-3 py-2 text-[11px] font-black rounded-lg transition-none ${
+                activePhase === phase ? 'bg-white shadow-md' : 'text-gray-400'
+              }`}
               style={{ color: activePhase === phase ? (phase === 'RECEIVE' ? '#ff9f43' : '#3b82f6') : undefined }}
             >
-              {phase === 'RECEIVE' ? 'RCV' : 'SRV'}
+              {phase}
             </button>
           ))}
         </div>
 
-        {/* Nodes */}
-        <div className="flex-1 flex items-center gap-0.5 relative">
+        {/* Nodes with dashed line */}
+        <div className="flex-1 flex items-center gap-1 relative">
+          {/* Dashed timeline line */}
           <div
-            className="absolute h-0.5 rounded-full opacity-20 top-1/2 -translate-y-1/2"
-            style={{ backgroundColor: phaseColor, left: 2, right: 2 }}
+            className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-px"
+            style={{
+              backgroundImage: `repeating-linear-gradient(to right, ${phaseColor}55 0px, ${phaseColor}55 6px, transparent 6px, transparent 12px)`,
+            }}
           />
           {currentNodes.map((node) => (
             <button
               key={node}
               onClick={() => setNode(node as any)}
-              className="flex-1 py-2 rounded-lg text-[8px] font-black whitespace-nowrap transition-none border-2 relative z-10"
+              className="flex-1 py-2 rounded-lg text-[10px] font-black whitespace-nowrap transition-none border-2 relative z-10"
               style={{
                 borderColor: activeNode === node ? phaseColor : 'transparent',
                 backgroundColor: activeNode === node ? phaseColor : 'white',
@@ -94,16 +115,16 @@ export const BottomPanel: React.FC<{ style?: React.CSSProperties }> = React.memo
           <button
             onClick={(e) => { e.preventDefault(); stepSequence(-1); }}
             onMouseDown={(e) => e.preventDefault()}
-            className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-full text-gray-600 border border-black/5"
+            className="w-9 h-9 flex items-center justify-center bg-gray-50 rounded-full text-gray-600 border border-black/5"
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft size={18} />
           </button>
           <button
             onClick={(e) => { e.preventDefault(); stepSequence(1); }}
             onMouseDown={(e) => e.preventDefault()}
-            className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-full text-gray-600 border border-black/5"
+            className="w-9 h-9 flex items-center justify-center bg-gray-50 rounded-full text-gray-600 border border-black/5"
           >
-            <ChevronRight size={16} />
+            <ChevronRight size={18} />
           </button>
         </div>
       </div>
