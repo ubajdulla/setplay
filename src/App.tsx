@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Court } from './components/Court';
 import { Toolbar } from './components/Toolbar';
 import { LeftPanel } from './components/LeftPanel';
@@ -16,13 +16,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X, ChevronLeft, ChevronRight, FolderOpen, Users } from 'lucide-react';
 
 export default function App() {
-  const { 
-    loadState, 
-    undo, 
-    redo, 
-    activeSchemaId, 
-    loadSchema, 
-    courtZoom,
+  const {
+    loadState,
+    activeSchemaId,
+    loadSchema,
     leftPanelOpen,
     rightPanelOpen,
     toggleLeftPanel,
@@ -68,17 +65,38 @@ export default function App() {
         }
         return;
       }
-      const nodes = activePhase === 'RECEIVE' ? RECEIVE_NODES : SERVE_NODES;
+      const skippedNodes = useStore.getState().skippedNodes || { SERVE: [], RECEIVE: [] };
+      const getNodes = (phase: 'SERVE' | 'RECEIVE') => {
+        const all = phase === 'RECEIVE' ? [...RECEIVE_NODES] : [...SERVE_NODES];
+        return all.filter(n => !(skippedNodes[phase] || []).includes(n));
+      };
+      const nodes = getNodes(activePhase as 'SERVE' | 'RECEIVE');
       const currentIndex = nodes.indexOf(activeNode as any);
       const rotations: any[] = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6'];
       if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
-        if (currentIndex < nodes.length - 1) { setNode(nodes[currentIndex + 1]); }
-        else if (activePhase === 'SERVE') { useStore.getState().setPhase('RECEIVE'); useStore.getState().setNode(RECEIVE_NODES[0]); }
-        else { const rIdx = rotations.indexOf(activeRotation); useStore.getState().setRotationKeepNode(rotations[(rIdx + 1) % 6]); useStore.getState().setPhase('SERVE'); useStore.getState().setNode(SERVE_NODES[0]); }
+        if (currentIndex >= 0 && currentIndex < nodes.length - 1) { setNode(nodes[currentIndex + 1]); }
+        else if (activePhase === 'SERVE') {
+          const rn = getNodes('RECEIVE');
+          if (rn.length > 0) { useStore.getState().setPhase('RECEIVE'); useStore.getState().setNode(rn[0] as any); }
+        } else {
+          const rIdx = rotations.indexOf(activeRotation);
+          useStore.getState().setRotationKeepNode(rotations[(rIdx + 1) % 6]);
+          const sn = getNodes('SERVE');
+          if (sn.length > 0) { useStore.getState().setPhase('SERVE'); useStore.getState().setNode(sn[0] as any); }
+          else { const rn = getNodes('RECEIVE'); if (rn.length > 0) { useStore.getState().setPhase('RECEIVE'); useStore.getState().setNode(rn[0] as any); } }
+        }
       } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
         if (currentIndex > 0) { setNode(nodes[currentIndex - 1]); }
-        else if (activePhase === 'RECEIVE') { useStore.getState().setPhase('SERVE'); useStore.getState().setNode(SERVE_NODES[SERVE_NODES.length - 1]); }
-        else { const rIdx = rotations.indexOf(activeRotation); useStore.getState().setRotationKeepNode(rotations[(rIdx - 1 + 6) % 6]); useStore.getState().setPhase('RECEIVE'); useStore.getState().setNode(RECEIVE_NODES[RECEIVE_NODES.length - 1]); }
+        else if (activePhase === 'RECEIVE') {
+          const sn = getNodes('SERVE');
+          if (sn.length > 0) { useStore.getState().setPhase('SERVE'); useStore.getState().setNode(sn[sn.length - 1] as any); }
+        } else {
+          const rIdx = rotations.indexOf(activeRotation);
+          useStore.getState().setRotationKeepNode(rotations[(rIdx - 1 + 6) % 6]);
+          const rn = getNodes('RECEIVE');
+          if (rn.length > 0) { useStore.getState().setPhase('RECEIVE'); useStore.getState().setNode(rn[rn.length - 1] as any); }
+          else { const sn = getNodes('SERVE'); if (sn.length > 0) { useStore.getState().setPhase('SERVE'); useStore.getState().setNode(sn[sn.length - 1] as any); } }
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);

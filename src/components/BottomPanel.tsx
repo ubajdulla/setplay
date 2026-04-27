@@ -9,8 +9,7 @@ import { Rotation, Phase, RECEIVE_NODES, SERVE_NODES, TimelineNode } from '../ty
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 
 export const BottomPanel: React.FC<{ style?: React.CSSProperties }> = React.memo(({ style }) => {
-  const { activeRotation, activePhase, activeNode, setRotation, setPhase, setNode } = useStore();
-  const skippedNodes = (useStore as any)(s => s.skippedNodes) || { SERVE: [], RECEIVE: [] };
+  const { activeRotation, activePhase, activeNode, setRotation, setPhase, setNode, skippedNodes } = useStore();
 
   const rotations: Rotation[] = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6'];
   const phases: Phase[] = ['SERVE', 'RECEIVE'];

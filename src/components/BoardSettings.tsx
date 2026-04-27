@@ -5,20 +5,19 @@ import { SERVE_NODES, RECEIVE_NODES } from '../types';
 export const BoardControl: React.FC = React.memo(() => null);
 
 export const DisplayOptions: React.FC = React.memo(() => {
-  const { toggles, toggleSetting, showBall, toggleBall } = useStore();
-  const skippedNodes = (useStore as any)(s => s.skippedNodes) || { SERVE: [], RECEIVE: [] };
-  const toggleNodeSkip = (useStore as any)(s => s.toggleNodeSkip);
+  const { toggles, toggleSetting, showBall, toggleBall, skippedNodes, toggleNodeSkip } = useStore();
 
   const handleToggle = useCallback((key: string) => toggleSetting(key as any), [toggleSetting]);
 
-  const isNodeSkipped = (phase: string, node: string) => (skippedNodes[phase] || []).includes(node);
+  const phaseKey = (phase: string) => phase as 'SERVE' | 'RECEIVE';
+  const isNodeSkipped = (phase: string, node: string) => (skippedNodes[phaseKey(phase)] || []).includes(node);
   const isPhaseAllSkipped = (phase: string, nodes: readonly string[]) =>
-    nodes.every(n => (skippedNodes[phase] || []).includes(n));
+    nodes.every(n => (skippedNodes[phaseKey(phase)] || []).includes(n));
 
   const togglePhaseAll = (phase: string, nodes: readonly string[]) => {
     const allSkipped = isPhaseAllSkipped(phase, nodes);
     nodes.forEach(n => {
-      const skipped = (skippedNodes[phase] || []).includes(n);
+      const skipped = (skippedNodes[phaseKey(phase)] || []).includes(n);
       if (allSkipped && skipped) toggleNodeSkip(phase, n);
       else if (!allSkipped && !skipped) toggleNodeSkip(phase, n);
     });
