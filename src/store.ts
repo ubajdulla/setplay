@@ -324,15 +324,16 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setRotation: (activeRotation) => {
-    const { saveChanges, checkpoint, activePhase } = get();
+    const { saveChanges, checkpoint, activePhase, skippedNodes } = get();
     if (!saveChanges && checkpoint) {
       // Revert data to checkpoint but keep the NEW rotation and CURRENT phase
       const revertedState = JSON.parse(JSON.stringify(checkpoint));
-      const newState = { 
-        ...revertedState, 
-        activeRotation, 
-        activePhase, 
-        activeNode: 'BASE' as TimelineNode 
+      const newState = {
+        ...revertedState,
+        activeRotation,
+        activePhase,
+        activeNode: 'BASE' as TimelineNode,
+        skippedNodes, // preserve current skip settings — never revert these
       };
       // Update checkpoint so subsequent navigations don't reset the rotation
       set({ ...newState, checkpoint: JSON.parse(JSON.stringify(newState)) });
@@ -347,10 +348,10 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setPhase: (activePhase) => {
-    const { saveChanges, checkpoint } = get();
+    const { saveChanges, checkpoint, skippedNodes } = get();
     if (!saveChanges && checkpoint) {
       const revertedState = JSON.parse(JSON.stringify(checkpoint));
-      const newState = { ...revertedState, activePhase, activeNode: 'BASE' as TimelineNode };
+      const newState = { ...revertedState, activePhase, activeNode: 'BASE' as TimelineNode, skippedNodes };
       set({ ...newState, checkpoint: JSON.parse(JSON.stringify(newState)) });
     } else {
       set({ activePhase, activeNode: 'BASE' });
