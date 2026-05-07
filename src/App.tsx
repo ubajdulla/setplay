@@ -70,10 +70,16 @@ export default function App() {
         const all = phase === 'RECEIVE' ? [...RECEIVE_NODES] : [...SERVE_NODES];
         return all.filter(n => !(skippedNodes[phase] || []).includes(n));
       };
+      const allNodes = (activePhase === 'RECEIVE' ? [...RECEIVE_NODES] : [...SERVE_NODES]) as string[];
       const nodes = getNodes(activePhase as 'SERVE' | 'RECEIVE');
       const currentIndex = nodes.indexOf(activeNode as any);
       const rotations: any[] = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6'];
       if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        if (currentIndex === -1 && nodes.length > 0) {
+          const rawIdx = allNodes.indexOf(activeNode as string);
+          const nextVisible = nodes.find((n: any) => allNodes.indexOf(n as string) > rawIdx);
+          if (nextVisible) { setNode(nextVisible as any); return; }
+        }
         if (currentIndex >= 0 && currentIndex < nodes.length - 1) { setNode(nodes[currentIndex + 1]); }
         else if (activePhase === 'SERVE') {
           const rn = getNodes('RECEIVE');
@@ -86,6 +92,11 @@ export default function App() {
           else { const rn = getNodes('RECEIVE'); if (rn.length > 0) { useStore.getState().setPhase('RECEIVE'); useStore.getState().setNode(rn[0] as any); } }
         }
       } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        if (currentIndex === -1 && nodes.length > 0) {
+          const rawIdx = allNodes.indexOf(activeNode as string);
+          const prevVisible = [...nodes].reverse().find((n: any) => allNodes.indexOf(n as string) < rawIdx);
+          if (prevVisible) { setNode(prevVisible as any); return; }
+        }
         if (currentIndex > 0) { setNode(nodes[currentIndex - 1]); }
         else if (activePhase === 'RECEIVE') {
           const sn = getNodes('SERVE');

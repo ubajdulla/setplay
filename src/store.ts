@@ -324,15 +324,16 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setRotation: (activeRotation) => {
-    const { saveChanges, checkpoint, activePhase } = get();
+    const { saveChanges, checkpoint, activePhase, skippedNodes } = get();
     if (!saveChanges && checkpoint) {
       // Revert data to checkpoint but keep the NEW rotation and CURRENT phase
       const revertedState = JSON.parse(JSON.stringify(checkpoint));
-      const newState = { 
-        ...revertedState, 
-        activeRotation, 
-        activePhase, 
-        activeNode: 'BASE' as TimelineNode 
+      const newState = {
+        ...revertedState,
+        activeRotation,
+        activePhase,
+        activeNode: 'BASE' as TimelineNode,
+        skippedNodes,
       };
       // Update checkpoint so subsequent navigations don't reset the rotation
       set({ ...newState, checkpoint: JSON.parse(JSON.stringify(newState)) });
@@ -347,10 +348,10 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setPhase: (activePhase) => {
-    const { saveChanges, checkpoint } = get();
+    const { saveChanges, checkpoint, skippedNodes } = get();
     if (!saveChanges && checkpoint) {
       const revertedState = JSON.parse(JSON.stringify(checkpoint));
-      const newState = { ...revertedState, activePhase, activeNode: 'BASE' as TimelineNode };
+      const newState = { ...revertedState, activePhase, activeNode: 'BASE' as TimelineNode, skippedNodes };
       set({ ...newState, checkpoint: JSON.parse(JSON.stringify(newState)) });
     } else {
       set({ activePhase, activeNode: 'BASE' });
@@ -823,6 +824,16 @@ export const useStore = create<AppState>((set, get) => ({
       const newList = list.includes(node) ? list.filter((n: string) => n !== node) : [...list, node];
       return { skippedNodes: { ...current, [phase]: newList } };
     });
+    const { activePhase, activeNode, skippedNodes } = get();
+    const isNowSkipped = (skippedNodes[phase as 'SERVE' | 'RECEIVE'] || []).includes(node);
+    if (isNowSkipped && activePhase === phase && activeNode === node) {
+      const allNodes = (phase === 'RECEIVE' ? [...RECEIVE_NODES] : [...SERVE_NODES]) as string[];
+      const visible = allNodes.filter(n => !(skippedNodes[phase as 'SERVE' | 'RECEIVE'] || []).includes(n));
+      const rawIdx = allNodes.indexOf(node);
+      const next = visible.find(n => allNodes.indexOf(n) > rawIdx)
+        || [...visible].reverse().find(n => allNodes.indexOf(n) < rawIdx);
+      if (next) set({ activeNode: next as any });
+    }
     get().saveCurrentSchema();
   },
 
