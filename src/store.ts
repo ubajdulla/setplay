@@ -823,6 +823,17 @@ export const useStore = create<AppState>((set, get) => ({
       const newList = list.includes(node) ? list.filter((n: string) => n !== node) : [...list, node];
       return { skippedNodes: { ...current, [phase]: newList } };
     });
+    // If the now-skipped node is currently active, jump to nearest visible node
+    const { activePhase, activeNode, skippedNodes } = get();
+    const isNowSkipped = (skippedNodes[phase as 'SERVE' | 'RECEIVE'] || []).includes(node);
+    if (isNowSkipped && activePhase === phase && activeNode === node) {
+      const allNodes = (phase === 'RECEIVE' ? [...RECEIVE_NODES] : [...SERVE_NODES]) as string[];
+      const visible = allNodes.filter(n => !(skippedNodes[phase as 'SERVE' | 'RECEIVE'] || []).includes(n));
+      const rawIdx = allNodes.indexOf(node);
+      const next = visible.find(n => allNodes.indexOf(n) > rawIdx)
+        || [...visible].reverse().find(n => allNodes.indexOf(n) < rawIdx);
+      if (next) set({ activeNode: next as any });
+    }
     get().saveCurrentSchema();
   },
 
